@@ -1,0 +1,39 @@
+name: SBOM avec Syft et Grype
+
+on: [push]
+
+jobs:
+  sbom:
+    name: sbom
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Générer la SBOM avec Syft
+        uses: anchore/sbom-action@v0.15.4
+        with:
+          path: .
+          format: syft-json
+          output-file: sbom-syft.json
+
+      - name: Enregistrer la SBOM comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom_syft
+          path: sbom-syft.json
+
+      - name: Installer Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scanner la SBOM avec Grype
+        run: |
+          grype sbom:sbom-syft.json -o json > rapport-grype.json
+
+      - name: Enregistrer le rapport Grype comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-report
+          path: rapport-grype.json
